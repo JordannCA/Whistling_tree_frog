@@ -1,0 +1,435 @@
+---
+title: "Verreauxii_tadpole_code"
+output: html_document
+date: '2023-10-27'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Statistical analysis: 
+
+(1) that Bd prevalence in tadpoles would be lower than in adults from the same breeding sites 
+
+```{r}
+install.packages("pacman")
+pacman::p_load(DHARMa, lme4, rptR, ggplot2, dplyr, readr, tidyverse, patchwork, epitools, cowplot)
+
+data <- read_csv("clean_data.csv") #all data 
+zoop <- read_csv("zoop.csv") #microfauna analysis summary
+temp_summary <- read_csv("temp_summary.csv") #ibutton data 
+
+```
+
+```{r}
+#issue with levels and record_type- need to check the levels before running 
+str(data)
+data$survey_period <- as.factor(data$survey_period)
+data$record_type <- factor(data$record_type, levels = unique(data$record_type))
+levels(data$record_type)
+
+
+glm1 <- glmer(Bd_binary ~ record_type + survey_period + scale(mean_temp) + scale(temp) + scale(count) + scale(species_richness) + (1 | site), family = binomial, data = data)
+
+isSingular(glm1)
+summary(glm1)
+confint(glm1)
+
+simulationOutput <- simulateResiduals(fittedModel= glm1)
+simulationOutput
+plot(simulationOutput)
+
+```
+
+Adult Model Only- 
+
+```{r}
+
+
+
+
+```
+
+GLM for body size vs prevalence for tadpoles
+
+```{r}
+# Fit a GLM with binomial family to look at tadpole body size effects 
+
+glm_model_body <- glm(Bd_binary ~ length_mm, family = poisson, data = all_data)
+
+# Summarize the model
+summary(glm_model_body)
+
+```
+
+##GLM's for microfauna 
+
+(3) there would be a negative relationship between Bd prevalence in tadpoles and the abundance and diversity of microfauna, which can consume Bd zoospores.  
+WAS found in the GLMM but not accurate yet. 
+
+```{r}
+#load zoop dataframe
+zoop <- read_csv("zoop.csv")
+
+##GLM to test abundance and diversity vs elevation 
+glm_diversity <- glm(shannon_index ~ elevation_m, data = zoop, family = gaussian())
+summary(glm_diversity)
+```
+
+```{r}
+glm_abundance <- glm(count ~ elevation_m, data = zoop, family = poisson())
+summary(glm_abundance)
+
+```
+
+
+##VISUALISATIONS #### JORDANN CLEAN THIS UP!!!! 
+##Dan or Ben dont look below here 
+
+##need to log or sqrt all Bd GE equivalance and prevelance for graphs etc ### 
+
+- look at regression for adult prevelance data by TEMP and ELEVATION???  
+- visualise Bd prevelance for adults and tadpoles by elevation - stacked bar plot? (sample size above the columns)
+NOW making stacked bar plot with sample sizes, Bd prevelance proportions by elevation, for adults and both tadpole sampling periods 
+
+```
+# Create a binary column based on the "Bd" column
+df <- df %>% mutate(binary_bd = case_when(
+  Bd == "Positive" ~ 1,
+  Bd == "Negative" ~ 0,
+  TRUE ~ NA_real_
+))
+
+# Aggregate the data based on elevation, site, record_type, binary_bd, and Survey_period
+aggregated_df <- df %>%
+  group_by(elevation_m, site, record_type, Survey_period, binary_bd) %>%
+  summarise(count = n(), .groups='drop')
+
+# Calculate the total count per group (elevation, record_type, Survey_period)
+total_count_per_group <- aggregated_df %>%
+  group_by(elevation_m, record_type, Survey_period) %>%
+  summarise(total_count = sum(count), .groups='drop')
+
+# Include the total count back into the aggregated DataFrame
+aggregated_df <- left_join(aggregated_df, total_count_per_group, by = c("elevation_m", "record_type", "Survey_period"))
+
+# Calculate the proportion for each group, Adults, TE, TL
+aggregated_df$proportion <- aggregated_df$count / aggregated_df$total_count
+
+#
+# Create a new column with custom facet labels
+aggregated_df$custom_facet <- case_when(
+  aggregated_df$record_type == "Adult" & is.na(aggregated_df$Survey_period) ~ "Adult",
+  aggregated_df$record_type == "Tadpole" & aggregated_df$Survey_period == 1 ~ "Tadpole Early",
+  aggregated_df$record_type == "Tadpole" & aggregated_df$Survey_period == 2 ~ "Tadpole Late",
+  TRUE ~ as.character(interaction(aggregated_df$record_type, aggregated_df$Survey_period, lex.order = TRUE))
+)
+
+# Convert elevation_m to numeric and sort it
+aggregated_df$elevation_m <- as.numeric(as.character(aggregated_df$elevation_m))
+aggregated_df <- aggregated_df[order(aggregated_df$elevation_m), ]
+
+# Convert it back to factor with ordered levels
+aggregated_df$elevation_m <- factor(aggregated_df$elevation_m, levels = unique(aggregated_df$elevation_m))
+  
+# Create the plot
+prevelance_plot <- ggplot(aggregated_df, aes(x = elevation_m, y = proportion, fill = as.factor(binary_bd))) +
+  geom_bar(stat = "identity", position = "stack", width = 0.6) +
+  geom_text(aes(label = total_count, y = 1.01), position = position_dodge(width = 0.3), vjust = 0, size = 2) +
+  facet_wrap(~ custom_facet, scales = "free_x") +
+  scale_x_discrete(expand = c(0.1, 0)) +
+  scale_fill_manual(values = c("blue", "orange"), labels = c("Negative", "Positive")) +
+  labs(
+    title = "Proportion of Bd Infections by Survey and Elevation",
+    x = "Elevation (m)",
+    y = "Proportion",
+    fill = "Bd Status"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+prevelance_plot
+
+# Save the plot with correct dimensions
+ggsave("prevelance_plot.png", plot = prevelance_plot, width = 20, height = 10)
+
+```
+
+(2) that Bd prevalence in tadpoles would decrease as the breeding season progressed and water temperatures increased, potentially creating warm microhabitat conditions where tadpoles could avoid or clear Bd infections. 
+GLMM model meant to be the test here... but working that one out
+
+- made overall plot of temps from ibuttons 
+- comparison boxplot of time periods 
+
+```
+#line plot of temperature over time, grouped by site and coloured by depth category
+ggplot(extracted_data, aes(x = date, y = temperature, color = depth_category)) +
+  geom_line() +
+  labs(x = "Date", y = "Temperature (°C)", color = "Depth Category") +
+  facet_wrap(~ site, scales = "free_y", ncol = 2) +  # Facet by site, adjust the number of columns as needed
+  theme_minimal()
+
+#make a clear distinction between time periods 
+
+# Calculate a reference date as 4 weeks (28 days) before the maximum date
+reference_date <- max(extracted_data$date) - 28*24*3600  # 28 days in seconds
+
+# Create a new column 'time_period' to categorize the dates
+extracted_data <- extracted_data %>%
+  mutate(time_period = ifelse(date >= reference_date, "72 Hours Before Collection", "72 Hours After Deployment"))
+
+# Create side-by-side boxplots of temperature by elevation category, colored by time period
+time_period_plot <- ggplot(extracted_data, aes(x = factor(elevation), y = temperature, fill = factor(time_period))) +
+  geom_boxplot(position = "dodge") +
+  labs(x = "Elevation", y = "Temperature (°C)", fill = "Time Period") +
+  theme_minimal()
+
+time_period_plot
+
+```
+- for the above graph need to look at the outlier, and see why some elevations have the after of before data missing- might be the extraction function? 
+- box plot shows clear increase in temperature. good way to visualise this? 
+
+
+TADPOLES AND TEMPS 
+- visualise amount of time spent in optimum Bd temperatures for the tadpoles  
+
+```
+##tadpole records 
+
+#how many hours are the tadpoles in unfavourable conditions? 
+ibutton <- ibutton_data_raw
+
+df_unfavorable <- ibutton %>%
+  group_by(site, date) %>%
+  mutate(unfavorable_hours = sum(temperature > 25))
+
+merged_data <- merge(ibutton, df_unfavorable, by = c("site", "date"))
+
+#this calculates the number of unfavourable hours at each pond. 
+unfavorable_hours_by_pond <- merged_data %>%
+  group_by(site) %>%
+  summarise(total_unfavorable_hours = sum(unfavorable_hours))
+
+#need to change site to factor, not numeric
+ggplot(data = unfavorable_hours_by_pond, aes(x = factor(site), y = total_unfavorable_hours)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Site", y = "Total unfavorable hours") +
+  ggtitle("Total Unfavorable Hours above 25 degrees Celcius") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.title = element_text(size = 12), axis.text = element_text(size = 10))
+
+#now for under 4 degrees 
+low_unfavorable <- ibutton %>%
+  group_by(site, date) %>%
+  mutate(unfavorable_hours = sum(temperature < 17))
+
+merged_data2 <- merge(ibutton, low_unfavorable, by = c("site", "date"))
+
+#this calculates the number of unfavourable hours at each pond. 
+low_unfavorable_hours_by_pond <- merged_data2 %>%
+  group_by(site) %>%
+  summarise(total_unfavorable_hours = sum(unfavorable_hours))
+
+#visualise this 
+#need to change site to factor, not numeric
+
+ggplot(data = low_unfavorable_hours_by_pond, aes(x = factor(site), y = total_unfavorable_hours)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Site", y = "Total unfavorable hours") +
+  ggtitle("Total Unfavorable Hours below 17 degrees Celcius") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.title = element_text(size = 12), axis.text = element_text(size = 10))
+
+## daily min and max temps experienced by tadpoles 
+# Read in the iButton data
+ibutton_data <- ibutton
+
+# Convert the date/time variable to a POSIXct format
+ibutton_data$date <- as.POSIXct(ibutton_data$date, format = "%m/%d/%Y %H:%M")
+
+# Create separate columns for date and time
+ibutton_data$date <- as.Date(ibutton_data$date)
+ibutton_data$time <- format(ibutton_data$date, "%H:%M:%S")
+
+# Create separate columns for shallow and deep temperatures
+ibutton_data1 <- pivot_wider(data = ibutton_data, names_from = site, values_from = temperature)
+
+##too many duplicates- try mean 
+# Calculate the daily mean temperatures for each site
+daily_mean_temp <- ibutton_data %>%
+  group_by(date, site, elevation) %>%
+  summarize(mean_temp = mean(temperature, na.rm = TRUE))
+
+# Convert pond to a factor
+daily_mean_temp$site <- factor(daily_mean_temp$site)
+
+#plot mean temp 
+ggplot(data = daily_mean_temp, aes(x = date, y = mean_temp, color = site)) +
+  geom_line() +
+  scale_color_discrete(name = "Site") +
+  labs(x = "Date", y = "Temperature (°C)") +
+  ggtitle("Daily Mean Temperatures by Site") +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom") +
+  theme(axis.title = element_text(size = 12), axis.text = element_text(size = 10))
+  
+#Calculate the daily min and max temperatures for each site
+daily_temp_summary <- ibutton_data %>%
+  group_by(date, site, elevation) %>%
+  summarize(min_temp = min(temperature),
+            max_temp = max(temperature))
+            
+# Convert elevation to a factor
+daily_temp_summary$elevation <- factor(daily_temp_summary$elevation)
+
+# Plot the daily min and max temperatures for each site
+ggplot(data = daily_temp_summary, aes(x = date, y = max_temp, color = elevation)) +
+  geom_line() +
+  geom_line(aes(y = min_temp)) +
+  scale_color_discrete(name = "Elevation") +
+  labs(x = "Date", y = "Temperature (°C)") +
+  ggtitle("Daily Min and Max Temperatures by Elevation") +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom") +
+  theme(axis.title = element_text(size = 12), axis.text = element_text(size = 10))
+
+##remove the outliers if needed
+# Filter out rows with temperatures above 35 degrees
+daily_temp_summary_filtered <- daily_temp_summary %>%
+  filter(max_temp <= 35, min_temp <= 35)
+
+# Convert elevation to a factor
+daily_mean_temp$elevation <- factor(daily_mean_temp$elevation)
+
+# daily mean ggplot
+dailymeantemp_plot <- ggplot() +
+  geom_line(data = daily_mean_temp, aes(x = date, y = mean_temp, color = elevation)) +
+  scale_color_discrete(name = "Site") +
+  labs(x = "Date", y = "Temperature (°C)") +
+  ggtitle("Daily Mean Temperatures (°C) Over Sampling Period") +
+  geom_hline(yintercept = 25, color = "red", linetype = 2, linewidth = 1.0) +
+  geom_hline(yintercept = 17, color = "red", linetype = 2, linewidth = 1.0) +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "right") + theme(axis.title = element_text(size = 12), axis.text = element_text(size = 10))
+
+dailymeantemp_plot
+
+##plot the daily min and max temps, with chytrid limits - GREAT FOR PAPER 
+#Plot the daily min and max temperatures for each site
+minmax_plot <- ggplot(data = daily_temp_summary_filtered, aes(x = date, y = max_temp, color = site)) +
+  geom_line(aes(x= date, y = max)) +
+  scale_color_discrete(name = "Site") +
+  labs(x = "Date", y = "Temperature (°C)") +
+  ggtitle("Daily Min and Max Temperatures by Site") +
+  geom_hline(yintercept = 25, color = "red", linetype = 2, linewidth = 1.0) +
+  geom_hline(yintercept = 4, color = "red", linetype = 2, linewidth = 1.0) +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom") + theme(axis.title = element_text(size = 12), axis.text = element_text(size = 10))
+
+# Filter Bd_records for records with record_type "Tadpole"
+tadpole_records <- Bd_records %>%
+  filter(record_type == "Tadpole", !is.na(ID))
+
+# Now create the plot using the cleaned data
+tadpole_plot <- ggplot(tadpole_records, aes(x = date, y = surface_temp, color = Bd)) +
+geom_point()+
+  geom_hline(yintercept = 25, color = "red", linetype = 2, linewidth = 1.5) +
+  geom_hline(yintercept = 17, color = "red", linetype = 2, linewidth = 1.5) +
+  labs(x = "Date", y = "Temperature (°C)") +
+  ggtitle("Temperatures of Tadpoles at Time of Capture")
+
+tadpole_plot
+
+# Combine the two plots
+
+library(cowplot)
+
+# Combine plots
+# Convert date values to Date format
+dailymeantemp_plot$data$date <- as.Date(dailymeantemp_plot$data$date)
+tadpole_plot$data$date <- as.Date(tadpole_plot$data$date)
+
+# Set the x-axis limits based on the date range of your data
+date_range <- range(dailymeantemp_plot$data$date, tadpole_plot$data$date)
+
+# Create the plots
+dailymeantemp_plot <- dailymeantemp_plot +
+  xlim(date_range)
+
+tadpole_plot <- tadpole_plot +
+  xlim(date_range)
+
+# Combine plots side by side
+combined_plot <- plot_grid(dailymeantemp_plot, tadpole_plot, labels = c("A", "B"), ncol = 1)
+
+# Display the combined plot
+print(combined_plot)
+
+```
+
+Above graph, seems a little off- I may have cut off the ibutton temps a little later accidentally- we definitely deployed on the same date as tadpoles so seems like a processing error- will fix this. 
+
+```
+# Create a bar plot of Shannon index by Elevation and Survey_period
+ggplot(zoop_summary_elevation, aes(x = factor(elevation_m), y = mean_shannon, fill = factor(Survey_period))) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.7) +
+  labs(x = "Elevation (m)", y = "Mean Shannon Index", fill = "Survey Period") +
+  facet_wrap(~ Survey_period, ncol = 1, scales = "free_y") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) + #rotates the labels 
+  scale_x_discrete(labels = function(x) format(as.numeric(x), scientific = FALSE, trim = TRUE)) #reduces the decimal places of elevation
+  
+#export a table 
+install.packages("gt")
+library(gt)
+
+zoop_summary %>%
+  gt() %>%
+  tab_header( title = "Zooplankton Species Richness and Shannon Index Summary")
+
+  
+##zooplankton abundance ####
+# simplify the columns 
+zooplankton1 <- zooplankton %>%
+    mutate(Site = as.character(Site)) %>%
+  select(c(Family, Order, Site, Survey_period, Count))
+ 
+#order across all sites, in two sampling periods 
+ggplot(zooplankton1, aes(x = Site, y = Count, fill = Order)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.7) +
+  labs(x = "Site", y = "Abundance", fill = "Order") +
+  scale_x_discrete(limits = unique(zooplankton1$Site)) +
+  facet_wrap(~ Survey_period, ncol = 1, scales = "free_y") +
+  theme(axis.text.y = element_text(angle = 90, hjust = 1))
+
+##making a facet grid graph to visualise against elevation 
+# Convert the "site" column to character in mastersheet_raw and update the dataset
+mastersheet_raw <- mastersheet_raw %>%
+  mutate(site = as.character(site))
+
+# Perform the left join to include elevation in the zooplankton data sheet 
+zooplankton2 <- zooplankton1 %>%
+  left_join(select(mastersheet_raw, elevation_m, site), by = c("Site" = "site"))
+
+#arrange by elevation 
+zooplankton2 <- zooplankton2 %>%
+  arrange(elevation_m)
+
+#plotted abundance by elevation 
+plot_1 <- ggplot(zooplankton2, aes(x = elevation_m, y = Count, fill = Order)) +
+  geom_bar(stat = "identity", position = "dodge", width = 30) +
+  labs(x = "Elevation (m)", y = "Abundance", fill = "Order") +
+  facet_wrap(~ Survey_period, ncol = 1, scales = "free_y")
+
+plot_1
+
+#facet grid plot by order of zooplankton 
+plot_2 <- ggplot(zooplankton2, aes(x = elevation_m, y = Count, fill = Order)) +
+  geom_bar(stat = "identity", position = "dodge", width = 50) +
+  scale_fill_brewer(palette = "Paired") +
+  labs(x = "Elevation (m)", y = "Abundance", fill = "Order", title = "Zooplankton Abundance by Elevation and Order") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  facet_grid(. ~ Order)
+
+plot_2
+
+```
