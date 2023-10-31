@@ -14,11 +14,11 @@ Statistical analysis:
 
 ```{r}
 install.packages("pacman")
-pacman::p_load(DHARMa, lme4, rptR, ggplot2, dplyr, readr, tidyverse, patchwork, epitools, cowplot)
+pacman::p_load(DHARMa, lme4, rptR, ggplot2, dplyr, readr, tidyverse, patchwork, epitools, cowplot, here)
 
-data <- read_csv("clean_data.csv") #all data 
-zoop <- read_csv("zoop.csv") #microfauna analysis summary
-temp_summary <- read_csv("temp_summary.csv") #ibutton data 
+data <- read_csv(here("data", "clean_data.csv")) #all data 
+zoop <- read_csv(here("data","zoop.csv")) #microfauna analysis summary
+temp_summary <- read_csv(here("data","temp_summary.csv")) #ibutton data 
 
 ```
 
