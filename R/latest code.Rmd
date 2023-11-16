@@ -26,9 +26,9 @@ temp_summary <- read_csv(here("data","temp_summary.csv")) #ibutton data
 #issue with levels and record_type- need to check the levels before running 
 str(data)
 data$survey_period <- as.factor(data$survey_period)
-data$record_type <- factor(data$record_type, levels = unique(data$record_type))
-levels(data$record_type)
+data$record_type <- as.factor(data$record_type)
 
+## WHY ARE THERE SO MANY NA's IN THE DATA, ESPECIALLY FOR SURVEY PERIOD? SURELY YOU KNOW WHEN YOU SURVEYED THAT THIS SHOULD BE FIXABLE? WAS THERE ARE ERROR REARRANTING OR MERGING DATA?
 
 glm1 <- glmer(Bd_binary ~ record_type + survey_period + scale(mean_temp) + scale(temp) + scale(count) + scale(species_richness) + (1 | site), family = binomial, data = data)
 
