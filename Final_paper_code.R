@@ -1,20 +1,7 @@
 ##L. verreauxii tadpole paper code 
 
 ##data set up##
-pacman::p_load(DHARMa, reshape2, gridExtra, lme4, rptR, pscl, glmmTMB, ggplot2, dplyr, readr, tidyverse, patchwork, epitools, cowplot, here)
-# Load necessary libraries
-library(readr)
-library(dplyr)
-library(stats)
-library(MASS) 
-# Load necessary libraries
-
-library(dplyr)
-library(sf)
-library(ggplot2)
-library(dplyr)
-library(raster)
-library(rasterVis)  # Optional, for advanced raster visualization
+pacman::p_load(DHARMa, stats, MASS, sf, raster, rasterVis, reshape2, gridExtra, lme4, rptR, pscl, glmmTMB, ggplot2, dplyr, readr, tidyverse, patchwork, epitools, cowplot, here)
 
 #raw data files 
 site_data <- read_csv("final_site_data.csv") #aggregated site level data 
