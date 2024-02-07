@@ -76,7 +76,7 @@ simulationOutput5 <- simulateResiduals(fittedModel= model4_glmmTMB)
 plot(simulationOutput5)
 
 # tadpole Bd intensity only model - NOT VERY WELL FIT!!! 
-model5 <- lmer(log10(GE_load +1)~ scale(survey_period) + scale(elevation) + scale(mean_temp) + scale(raw_count) + scale(species_richness) + scale(surface_temp) + (1 | site), data = tadpole_data) 
+model5 <- lmer(log10(GE_load +1)~ scale(survey_period) + scale(elevation) + scale(mean_temp) + scale(raw_count) + scale(shannon_index) + scale(surface_temp) + (1 | site), data = tadpole_data) 
 
 #check fit of model
 confint(model5)
