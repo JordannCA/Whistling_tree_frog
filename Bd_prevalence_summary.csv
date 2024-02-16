@@ -1,0 +1,27 @@
+site_sampled,survey,positive_samples,total_samples,prevalence
+1,Adults,4,8,0.5
+1,Tadpoles - late,2,20,0.1
+2,Adults,1,2,0.5
+3,Adults,3,5,0.6
+4,Adults,4,4,1.0
+4,Tadpoles - early,1,20,0.05
+4,Tadpoles - late,2,20,0.1
+6,Adults,4,8,0.5
+7,Adults,2,4,0.5
+8,Adults,4,5,0.8
+8,Tadpoles - late,1,20,0.05
+9,Adults,1,4,0.25
+10,Adults,5,7,0.7142857142857143
+11,Adults,3,4,0.75
+13,Adults,12,13,0.9230769230769231
+14,Adults,1,7,0.14285714285714285
+14,Tadpoles - early,2,20,0.1
+14,Tadpoles - late,1,20,0.05
+15,Adults,4,4,1.0
+17,Adults,14,20,0.7
+18,Adults,1,3,0.3333333333333333
+19,Adults,12,20,0.6
+20,Adults,2,5,0.4
+21,Adults,12,20,0.6
+22,Adults,5,21,0.23809523809523808
+23,Adults,2,20,0.1
